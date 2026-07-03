@@ -9,6 +9,7 @@ import { MdClose } from 'react-icons/md';
 
 import { getRoutes } from '../../selectors';
 import parseStringWithSlashes from '../../utils/parseStringWithSlashes';
+import { getRouteDistance, makeDistanceReadable } from '../../utils/distance';
 import SectorElement from './SectorElement';
 import CollapsibleElement from './CollapsibleElement';
 
@@ -25,20 +26,6 @@ class RouteElement extends Component {
 
   toggleCollapsible() {
     this.setState({ isOpened: !this.state.isOpened });
-  }
-
-  makeDistanceReadable(distance) {
-    const { distanceUnit } = this.props;
-    switch (distanceUnit) {
-      case 'km':
-        return `${Math.round(distance / 1000)} km`;
-      case 'mi':
-        return `${Math.round(distance / 1609.344)} mi`;
-      case 'nm':
-        return `${Math.round(distance / 1852)} nm`;
-      default:
-        return null;
-    }
   }
 
   // take the urlparam, take away the route that was deleted and
@@ -90,10 +77,13 @@ class RouteElement extends Component {
       return s12;
     });
 
-    const readableSectorDistances = distances.map(distance => this.makeDistanceReadable(distance));
+    const { distanceUnit } = this.props;
+    const readableSectorDistances = distances.map(distance =>
+      makeDistanceReadable(distance, distanceUnit)
+    );
 
-    const totalDistance = distances.reduce((acc, val) => acc + val);
-    const readableTotalDistance = this.makeDistanceReadable(totalDistance);
+    const totalDistance = getRouteDistance(route);
+    const readableTotalDistance = makeDistanceReadable(totalDistance, distanceUnit);
 
     const { s12: nonStopDistance } = geodesic.Inverse(
       route[0].lat,
@@ -101,10 +91,10 @@ class RouteElement extends Component {
       route[route.length - 1].lat,
       route[route.length - 1].lng
     );
-    const readableNonStopDistance = this.makeDistanceReadable(nonStopDistance);
+    const readableNonStopDistance = makeDistanceReadable(nonStopDistance, distanceUnit);
 
     const distanceDifference = totalDistance - nonStopDistance;
-    const readableDistanceDifference = this.makeDistanceReadable(distanceDifference);
+    const readableDistanceDifference = makeDistanceReadable(distanceDifference, distanceUnit);
 
     const distanceDifferencePercentage = (distanceDifference * 100) / nonStopDistance;
     const readableDifferencePercentage = `${distanceDifferencePercentage.toFixed(1)}%`;
