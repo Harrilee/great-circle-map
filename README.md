@@ -38,4 +38,4 @@ If you plan to host this on your own domain you have to set up your own Google M
 
 ## Airport data
 
-Airport data comes from the [openflights.org](https://openflights.org/data.html#airport) airport database.
+Airport data comes from [OpenTravelData (OPTD)](https://github.com/opentraveldata/opentraveldata), an actively maintained, industry-standard reference dataset. To refresh `public/airports.csv`, download the latest [`optd_por_public.csv`](https://raw.githubusercontent.com/opentraveldata/opentraveldata/master/opentraveldata/optd_por_public.csv) and regenerate: keep active airport entries (`location_type` containing `A`, no `date_until`) plus metropolitan grouping codes (city codes serving two or more airports), de-duplicating on ICAO by highest page rank and ordering by page rank so the most significant airports come first.

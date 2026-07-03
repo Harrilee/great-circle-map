@@ -1,7 +1,7 @@
 import Papa from 'papaparse';
 
 // This function is only called once, when the website first loads
-// Fetch the data for all 8,300 airports, and put it into the redux store
+// Fetch the data for all ~9,400 airports, and put it into the redux store
 export default function getAirportData() {
   return (dispatch, getState) => {
     const { airportData } = getState();
