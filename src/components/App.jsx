@@ -34,11 +34,14 @@ function App({ dispatch, airportData, result, query, pathname }) {
   const label = ['city', 'iata', 'icao', 'none'].includes(query.label) ? query.label : 'iata';
   const color = /^#[0-9a-f]{6}$/i.test(query.color || '') ? query.color : '#80d9e3';
   const path = pathname.replace(basePath, '').replace(/\/$/, '') || '/';
-  const mode = path.includes('roadmap')
-    ? 'roadmap'
-    : path.includes('satellite') || path === '/leaflet'
-    ? 'satellite'
-    : 'globe';
+  const mode =
+    path === '/roadmap-3d'
+      ? 'roadmap-3d'
+      : path.includes('roadmap')
+      ? 'roadmap'
+      : path.includes('satellite') || path === '/leaflet'
+      ? 'satellite'
+      : 'globe';
   const update = values => dispatch(push({ query: values }, { persistQuery: true }));
   const send = (type, extra = {}) => setCommand({ type, ...extra, time: Date.now() });
   const distance = r => makeDistanceReadable(getRouteDistance(r), unit);
@@ -97,6 +100,8 @@ function App({ dispatch, airportData, result, query, pathname }) {
           ? 'SATELLITE / 3D'
           : mode === 'satellite'
           ? 'SATELLITE / 2D'
+          : mode === 'roadmap-3d'
+          ? 'STREET MAP / 3D'
           : 'STREET MAP / 2D'}
       </div>
       <aside
@@ -113,7 +118,7 @@ function App({ dispatch, airportData, result, query, pathname }) {
           </button>
         </div>
         {!collapsed && (
-          <>
+          <div className="atlas-panel-body">
             <nav className="atlas-tabs" aria-label="Planner sections">
               <button aria-pressed={tab === 'routes'} onClick={() => setTab('routes')}>
                 Routes
@@ -207,74 +212,81 @@ function App({ dispatch, airportData, result, query, pathname }) {
                     ))}
                   </div>
                 )}
-                <div className="atlas-route-list">
-                  {routes.map((route, index) => (
-                    <article className="atlas-route" key={`${route.id}-${index}`}>
-                      <div className="atlas-route-heading">
-                        <button onClick={() => send('route', { route })}>
-                          <i style={{ borderColor: color }} />
-                          {route.map(a => a.userEnteredCode).join(' → ')}
-                        </button>
-                        <button
-                          className="atlas-remove"
-                          aria-label={`Remove route ${index + 1}`}
-                          onClick={() =>
-                            update({
-                              routes: routes
-                                .filter((_, i) => i !== index)
-                                .map(r => r.map(a => a.userEnteredCode).join('-'))
-                                .join(',')
-                            })
-                          }
-                        >
-                          ×
-                        </button>
-                      </div>
-                      <details>
-                        <summary>
-                          {distance(route)}
-                          <span>{Math.max(0, route.length - 1)} legs · Details</span>
-                        </summary>
-                        <div className="atlas-legs">
-                          {route.slice(1).map((a, i) => (
-                            <div key={i}>
-                              <span>
-                                {route[i].city || route[i].iata} → {a.city || a.iata}
-                              </span>
-                              <b>{distance([route[i], a])}</b>
-                            </div>
-                          ))}
-                          {route.length > 2 && (
-                            <>
-                              <div>
-                                <span>Nonstop comparison</span>
-                                <b>{distance([route[0], route[route.length - 1]])}</b>
-                              </div>
-                              <div>
-                                <span>Extra distance</span>
-                                <b>
-                                  {makeDistanceReadable(
-                                    getRouteDistance(route) -
-                                      getRouteDistance([route[0], route[route.length - 1]]),
-                                    unit
-                                  )}
-                                </b>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </details>
-                    </article>
-                  ))}
-                </div>
                 {routes.length > 0 && (
-                  <div className="atlas-total">
-                    <span>TOTAL DISTANCE</span>
-                    <strong>{makeDistanceReadable(total, unit)}</strong>
-                    <small>
-                      {sectors} legs · {new Set(routes.flat().map(a => a.id)).size} airports
-                    </small>
-                  </div>
+                  <details className="atlas-all-data" onToggle={() => send('layout')}>
+                    <summary>
+                      Show all data <span>{sectors} legs</span>
+                    </summary>
+                    <div className="atlas-route-list">
+                      {routes.map((route, index) => (
+                        <article className="atlas-route" key={`${route.id}-${index}`}>
+                          <div className="atlas-route-heading">
+                            <button onClick={() => send('route', { route })}>
+                              <i style={{ borderColor: color }} />
+                              {route.map(a => a.userEnteredCode).join(' → ')}
+                            </button>
+                            <button
+                              className="atlas-remove"
+                              aria-label={`Remove route ${index + 1}`}
+                              onClick={() =>
+                                update({
+                                  routes: routes
+                                    .filter((_, i) => i !== index)
+                                    .map(r => r.map(a => a.userEnteredCode).join('-'))
+                                    .join(',')
+                                })
+                              }
+                            >
+                              ×
+                            </button>
+                          </div>
+                          <details>
+                            <summary>
+                              {distance(route)}
+                              <span>{Math.max(0, route.length - 1)} legs · Details</span>
+                            </summary>
+                            <div className="atlas-legs">
+                              {route.slice(1).map((a, i) => (
+                                <div key={i}>
+                                  <span>
+                                    {route[i].city || route[i].iata} → {a.city || a.iata}
+                                  </span>
+                                  <b>{distance([route[i], a])}</b>
+                                </div>
+                              ))}
+                              {route.length > 2 && (
+                                <>
+                                  <div>
+                                    <span>Nonstop comparison</span>
+                                    <b>{distance([route[0], route[route.length - 1]])}</b>
+                                  </div>
+                                  <div>
+                                    <span>Extra distance</span>
+                                    <b>
+                                      {makeDistanceReadable(
+                                        getRouteDistance(route) -
+                                          getRouteDistance([route[0], route[route.length - 1]]),
+                                        unit
+                                      )}
+                                    </b>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </details>
+                        </article>
+                      ))}
+                    </div>
+                    {routes.length > 0 && (
+                      <div className="atlas-total">
+                        <span>TOTAL DISTANCE</span>
+                        <strong>{makeDistanceReadable(total, unit)}</strong>
+                        <small>
+                          {sectors} legs · {new Set(routes.flat().map(a => a.id)).size} airports
+                        </small>
+                      </div>
+                    )}
+                  </details>
                 )}
               </>
             ) : (
@@ -284,6 +296,7 @@ function App({ dispatch, airportData, result, query, pathname }) {
                   <select id="map-mode" value={mode} onChange={e => switchMode(e.target.value)}>
                     <option value="globe">Satellite globe · 3D</option>
                     <option value="satellite">Satellite map · 2D</option>
+                    <option value="roadmap-3d">Street map · 3D</option>
                     <option value="roadmap">Street map · 2D</option>
                   </select>
                 </label>
@@ -322,7 +335,7 @@ function App({ dispatch, airportData, result, query, pathname }) {
                   />
                 </label>
                 <p className="atlas-muted">
-                  Distances follow the WGS84 ellipsoid. Dashed paths show the shortest
+                  Distances follow the WGS84 ellipsoid. Solid paths show the shortest
                   airport-to-airport routes, not recorded flight tracks.
                 </p>
                 <p className="atlas-muted">
@@ -340,7 +353,7 @@ function App({ dispatch, airportData, result, query, pathname }) {
                 {shared}
               </p>
             )}
-          </>
+          </div>
         )}
       </aside>
       <nav className="atlas-controls" aria-label="Map controls">

@@ -1,14 +1,15 @@
 ## Great Circle Map — Flight Atlas
 
 An interactive flight planner with a full-screen satellite globe, a floating dark
-planner, dashed WGS84 geodesics, and flat airport labels that stay readable while
+planner, thin solid WGS84 geodesics, and flat airport labels that stay readable while
 you rotate the Earth. The planner becomes a collapsible bottom panel on phones.
 
 - Search by city, airport name, IATA or ICAO code and append airports to a route.
 - Draw routes such as `SEA-ANC-BRW`, multiple routes separated by commas, or slash
   expansions such as `SFO-HND/SIN`.
 - View each leg, route totals, nonstop comparisons and the total across all routes.
-- Switch between the 3D satellite globe, 2D satellite map and 2D street map.
+- Switch between satellite and street maps in both 3D and 2D.
+- Expand **Show all data** to inspect route details and totals; these stay collapsed by default.
 - Choose kilometers, miles or nautical miles, label format and route color.
 - Share the current URL; route and display settings survive reload and navigation.
 
@@ -17,7 +18,7 @@ airport-to-airport paths, not recorded flight tracks or airline schedules. Satel
 imagery comes from Esri; attribution remains available on the map. Cesium 1.108 is
 loaded from its CDN, so internet access and a WebGL-capable browser are required.
 No Google Maps or Cesium ion API key is needed. Legacy `/globe`, `/satellite`,
-`/roadmap`, `/leaflet` and `/google-*` URLs remain supported; Google URLs now use
+`/roadmap`, `/roadmap-3d`, `/leaflet` and `/google-*` URLs remain supported; Google URLs now use
 the corresponding Esri map view.
 
 ## Development and verification

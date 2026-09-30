@@ -46,6 +46,7 @@ initializeAnalytics();
 const routes = {
   '/satellite': { mapType: 'satellite' },
   '/roadmap': { mapType: 'roadmap' },
+  '/roadmap-3d': { mapType: 'roadmap' },
   '/google-satellite': { mapType: 'satellite' },
   '/google-roadmap': { mapType: 'roadmap' }
 };

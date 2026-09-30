@@ -39,6 +39,8 @@ export default function Globe({ routes, label, color, mode, command, onAirport, 
         viewer = new Cesium.Viewer(mount.current, {
           imageryProvider: false,
           skyBox: false,
+          // Match the basemap projection so 2D tiles retain their local proportions.
+          mapProjection: new Cesium.WebMercatorProjection(),
           baseLayerPicker: false,
           geocoder: false,
           homeButton: false,
@@ -49,7 +51,7 @@ export default function Globe({ routes, label, color, mode, command, onAirport, 
           fullscreenButton: false,
           infoBox: false,
           selectionIndicator: false,
-          requestRenderMode: true,
+          requestRenderMode: false,
           scene3DOnly: false,
           shouldAnimate: false
         });
@@ -84,7 +86,7 @@ export default function Globe({ routes, label, color, mode, command, onAirport, 
     const viewer = viewerRef.current,
       Cesium = C();
     onStatusRef.current('Loading imagery…');
-    const street = mode === 'roadmap';
+    const street = mode === 'roadmap' || mode === 'roadmap-3d';
     Cesium.ArcGisMapServerImageryProvider.fromUrl(
       `https://services.arcgisonline.com/ArcGIS/rest/services/${
         street ? 'World_Street_Map' : 'World_Imagery'
@@ -97,7 +99,7 @@ export default function Globe({ routes, label, color, mode, command, onAirport, 
         provider.errorEvent.addEventListener(() =>
           onStatusRef.current('Some map tiles are unavailable. Zoom out or retry.')
         );
-        if (mode === 'globe') viewer.scene.morphTo3D(0);
+        if (mode === 'globe' || mode === 'roadmap-3d') viewer.scene.morphTo3D(0);
         else viewer.scene.morphTo2D(0);
         fit();
         viewer.scene.requestRender();
@@ -177,12 +179,9 @@ export default function Globe({ routes, label, color, mode, command, onAirport, 
         viewer.entities.add({
           polyline: {
             positions: sampled,
-            width: 3,
+            width: 1.5,
             arcType: Cesium.ArcType.NONE,
-            material: new Cesium.PolylineDashMaterialProperty({
-              color: Cesium.Color.fromCssColorString(color),
-              dashLength: 17
-            })
+            material: Cesium.Color.fromCssColorString(color)
           }
         });
       route.forEach(airport => airports.set(airport.id, airport));

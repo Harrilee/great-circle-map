@@ -7,7 +7,7 @@ const source = path.resolve(__dirname, '../public');
 fs.mkdirSync(target, { recursive: true });
 for (const file of ['bundle.js', 'bundle.js.LICENSE.txt', 'airports.csv']) fs.copyFileSync(path.join(source, file), path.join(target, file));
 const html = fs.readFileSync(path.join(source, 'index.html'), 'utf8').replace('data-atlas src="/bundle.js"', 'data-atlas src="/tools/great-circle-map/bundle.js"');
-for (const mode of ['', 'globe', 'satellite', 'roadmap', 'leaflet', 'google-satellite', 'google-roadmap']) {
+for (const mode of ['', 'globe', 'satellite', 'roadmap', 'roadmap-3d', 'leaflet', 'google-satellite', 'google-roadmap']) {
   const dir = path.join(target, mode);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'index.html'), html);

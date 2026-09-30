@@ -93,7 +93,9 @@ button:disabled {
   left: 34px;
   width: 310px;
   max-height: calc(100% - 211px);
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 20px;
   background: rgba(9, 21, 32, 0.9);
   border: 1px solid #9eb7cf32;
@@ -260,7 +262,7 @@ button:disabled {
 .atlas-route-heading i {
   width: 19px;
   flex-shrink: 0;
-  border-top: 2px dashed;
+  border-top: 1.5px solid;
 }
 .atlas-route-heading .atlas-remove {
   padding: 0 5px;
@@ -562,10 +564,29 @@ button:disabled {
 }
 
 .atlas-panel-heading {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #0d1e2b;
-  padding: 5px 0;
-  box-shadow: 0 -20px 0 10px #0d1e2b;
+  flex-shrink: 0;
+}
+.atlas-panel-body {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #4d6878 transparent;
+}
+.atlas-all-data {
+  margin-top: 17px;
+  border-top: 1px solid #9eb7cf32;
+}
+.atlas-all-data > summary {
+  cursor: pointer;
+  padding: 13px 0;
+  font-size: 12px;
+  color: #c2d2df;
+}
+.atlas-all-data > summary span {
+  float: right;
+  font-size: 10px;
+  color: #93aabb;
+}
+.atlas-all-data .atlas-route-list {
+  margin-top: 0;
 }
