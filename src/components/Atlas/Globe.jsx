@@ -116,6 +116,23 @@ export default function Globe({ routes, label, color, mode, command, onAirport, 
     const viewer = viewerRef.current,
       Cesium = C();
     if (!viewer || !points.length) return;
+    if (viewer.scene.mode === Cesium.SceneMode.SCENE2D) {
+      const bounds = Cesium.Rectangle.fromCartesianArray(points);
+      const width = Math.max(0.03, Cesium.Rectangle.computeWidth(bounds));
+      const height = Math.max(0.03, Cesium.Rectangle.computeHeight(bounds));
+      const mobile = innerWidth < 700;
+      const padded =
+        width * 1.9 >= Math.PI * 2
+          ? Cesium.Rectangle.MAX_VALUE
+          : new Cesium.Rectangle(
+              Cesium.Math.negativePiToPi(bounds.west - width * (mobile ? 0.3 : 0.7)),
+              Math.max(-Math.PI / 2, bounds.south - height * (mobile ? 1.1 : 0.3)),
+              Cesium.Math.negativePiToPi(bounds.east + width * 0.3),
+              Math.min(Math.PI / 2, bounds.north + height * 0.3)
+            );
+      viewer.camera.flyTo({ destination: padded, duration: 1.1 });
+      return;
+    }
     const sphere = Cesium.BoundingSphere.fromPoints(points);
     const range = Math.max(700000, sphere.radius * (innerWidth < 700 ? 4.8 : 3.5));
     viewer.camera.flyToBoundingSphere(sphere, {
