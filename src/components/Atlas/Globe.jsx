@@ -94,6 +94,19 @@ export default function Globe({ routes, label, color, mode, command, onAirport, 
     )
       .then(provider => {
         if (cancelled) return;
+        // Keep source credits visible inline, removing the need for an attribution popup.
+        if (provider.credit) provider.credit.showOnScreen = true;
+        if (provider.getTileCredits) {
+          const getTileCredits = provider.getTileCredits.bind(provider);
+          provider.getTileCredits = (...args) => {
+            const credits = getTileCredits(...args);
+            if (credits)
+              credits.forEach(credit => {
+                credit.showOnScreen = true;
+              });
+            return credits;
+          };
+        }
         viewer.imageryLayers.removeAll();
         viewer.imageryLayers.addImageryProvider(provider);
         provider.errorEvent.addEventListener(() =>

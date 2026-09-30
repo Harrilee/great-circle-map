@@ -5,6 +5,7 @@ import { getAirportData } from '../actionCreators';
 import { getRoutes } from '../selectors';
 import { getRouteDistance, makeDistanceReadable } from '../utils/distance';
 import Globe from './Atlas/Globe';
+import AirportPicker from './Atlas/AirportPicker';
 import { basePath } from '../utils/assetUrl';
 import '../stylesheets/atlas.scss';
 
@@ -12,7 +13,6 @@ const EMPTY_ROUTES = [];
 
 function App({ dispatch, airportData, result, query, pathname }) {
   const [draft, setDraft] = useState(query.routes || '');
-  const [search, setSearch] = useState('');
   const [tab, setTab] = useState('routes');
   const [collapsed, setCollapsed] = useState(false);
   const [command, setCommand] = useState(null);
@@ -28,7 +28,7 @@ function App({ dispatch, airportData, result, query, pathname }) {
   }, [query.routes]);
   useEffect(() => {
     setCommand({ type: 'layout', time: Date.now() });
-  }, [tab, collapsed, selected, search]);
+  }, [tab, collapsed, selected]);
   const routes = result.routes || EMPTY_ROUTES;
   const unit = ['km', 'mi', 'nm'].includes(query.unit) ? query.unit : 'km';
   const label = ['city', 'iata', 'icao', 'none'].includes(query.label) ? query.label : 'iata';
@@ -47,25 +47,6 @@ function App({ dispatch, airportData, result, query, pathname }) {
   const distance = r => makeDistanceReadable(getRouteDistance(r), unit);
   const sectors = routes.reduce((n, r) => n + Math.max(0, r.length - 1), 0);
   const total = routes.reduce((n, r) => n + getRouteDistance(r), 0);
-  const matches =
-    search.trim().length > 1
-      ? airportData
-          .filter(a =>
-            [a.iata, a.icao, a.city, a.name].some(v =>
-              String(v || '')
-                .toLowerCase()
-                .includes(search.toLowerCase())
-            )
-          )
-          .slice(0, 6)
-      : [];
-  const addAirport = airport => {
-    const code = airport.iata || airport.icao;
-    setDraft(
-      value => value.trim() + (!value.trim() || /[-,;\n/]$/.test(value.trim()) ? '' : '-') + code
-    );
-    setSearch('');
-  };
   const switchMode = value =>
     dispatch(push({ pathname: `/${value === 'globe' ? '' : value}` }, { persistQuery: true }));
   async function share() {
@@ -129,68 +110,57 @@ function App({ dispatch, airportData, result, query, pathname }) {
             </nav>
             {tab === 'routes' ? (
               <>
-                <form
-                  onSubmit={e => {
-                    e.preventDefault();
-                    update({ routes: draft });
+                <AirportPicker
+                  airports={airportData}
+                  onAddRoute={route => {
+                    const existing = (query.routes || '').trim().replace(/[,;\/\n]+$/, '');
+                    update({ routes: existing ? `${existing}, ${route}` : route });
                   }}
-                >
-                  <label className="atlas-field-label" htmlFor="airport-search">
-                    Find an airport
-                  </label>
-                  <input
-                    id="airport-search"
-                    placeholder="City, airport, IATA or ICAO"
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    autoComplete="off"
-                  />
-                  {matches.length > 0 && (
-                    <ul className="atlas-search-results">
-                      {matches.map(a => (
-                        <li key={a.id}>
-                          <button type="button" onClick={() => addAirport(a)}>
-                            <strong>{a.iata || a.icao}</strong>
-                            <span>
-                              {a.city}
-                              <small>{a.name}</small>
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <label className="atlas-field-label" htmlFor="route-input">
-                    Your route
-                  </label>
-                  <textarea
-                    id="route-input"
-                    value={draft}
-                    onChange={e => setDraft(e.target.value)}
-                    placeholder="SEA-ANC-BRW"
-                    spellCheck="false"
-                    aria-describedby="route-help"
-                  />
-                  <p id="route-help" className="atlas-muted">
-                    Connect airports with – · Separate routes with commas.
-                    <br />
-                    IATA, ICAO and slash expansion are supported.
-                  </p>
-                  <div className="atlas-row">
-                    <button className="atlas-primary" type="submit" disabled={!airportData.length}>
-                      Draw routes <span>↗</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDraft('');
-                        update({ routes: '' });
-                      }}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </form>
+                />
+                <details className="atlas-code-entry" onToggle={() => send('layout')}>
+                  <summary>Paste or edit airport codes</summary>
+                  <form
+                    onSubmit={e => {
+                      e.preventDefault();
+                      update({ routes: draft });
+                    }}
+                  >
+                    <label className="atlas-field-label" htmlFor="route-input">
+                      Airport codes
+                    </label>
+                    <textarea
+                      id="route-input"
+                      value={draft}
+                      onChange={e => setDraft(e.target.value)}
+                      placeholder="SEA-ANC-BRW"
+                      spellCheck="false"
+                      aria-describedby="route-help"
+                    />
+                    <p id="route-help" className="atlas-muted">
+                      Connect airports with – · Separate routes with commas.
+                      <br />
+                      IATA, ICAO and slash expansion are supported.
+                    </p>
+                    <div className="atlas-row">
+                      <button
+                        className="atlas-primary"
+                        type="submit"
+                        disabled={!airportData.length}
+                      >
+                        Draw routes <span>↗</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDraft('');
+                          update({ routes: '' });
+                        }}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </form>
+                </details>
                 {!airportData.length && (
                   <p role="status" className="atlas-muted">
                     Loading airports…{' '}

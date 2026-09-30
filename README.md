@@ -4,7 +4,10 @@ An interactive flight planner with a full-screen satellite globe, a floating dar
 planner, thin solid WGS84 geodesics, and flat airport labels that stay readable while
 you rotate the Earth. The planner becomes a collapsible bottom panel on phones.
 
-- Search by city, airport name, IATA or ICAO code and append airports to a route.
+- Search by city, airport name, IATA or ICAO code and select airport chips.
+  Enter selects the highlighted airport; Enter again with an empty search adds the
+  selected route, preserving existing routes. Chips can be removed with × or Backspace.
+- Paste or edit airport-code strings in the collapsed advanced input.
 - Draw routes such as `SEA-ANC-BRW`, multiple routes separated by commas, or slash
   expansions such as `SFO-HND/SIN`.
 - View each leg, route totals, nonstop comparisons and the total across all routes.
