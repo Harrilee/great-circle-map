@@ -6,19 +6,13 @@
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <meta name="description" content="Great Circle Map displays the shortest
   route between airports and calculates the distance. It draws geodesic flight
-  paths on top of Google maps, so you can create your own route map.">
+  paths on a high-resolution satellite globe, so you can create your own route map.">
   <title>Great Circle Map</title>
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
-  />
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8379477729654394"
-     crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.108/Build/Cesium/Widgets/widgets.css">
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.108/Build/Cesium/Cesium.js"></script>
 </head>
 <body>
   <div id="app"></div>
-  <script src="/bundle.js"></script>
+  <script data-atlas src="/bundle.js"></script>
 </body>
 </html>

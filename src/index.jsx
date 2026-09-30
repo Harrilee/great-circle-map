@@ -8,8 +8,7 @@ import createBrowserHistory from 'history/createBrowserHistory';
 import ReduxThunk from 'redux-thunk';
 // import logger from 'redux-logger';
 
-import './stylesheets/styles.scss';
-import './stylesheets/map.scss';
+import { basePath } from './utils/assetUrl';
 
 import reducers from './reducers';
 import App from './components/App';
@@ -52,7 +51,8 @@ const routes = {
 };
 
 const { reducer, middleware, enhancer } = routerForBrowser({
-  routes
+  routes,
+  basename: basePath || undefined
 });
 
 const store = createStore(

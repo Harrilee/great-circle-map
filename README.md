@@ -1,40 +1,55 @@
-## About
+## Great Circle Map — Flight Atlas
 
-Great Circle Map is a tool for visualizing flight routes and calculating the distance
-between airports. A great circle path (also known as a geodesic path) is the shortest
-possible route between two points on the surface of earth or any other sphere. The map
-uses the Mercator projection by default. On this type of map, great circle paths tend to
-look curved even though they are in fact straight. As an alternative, the website also features a 3D
-globe view which doesn’t have that problem.
+An interactive flight planner with a full-screen satellite globe, a floating dark
+planner, dashed WGS84 geodesics, and flat airport labels that stay readable while
+you rotate the Earth. The planner becomes a collapsible bottom panel on phones.
 
-Projecting a 3-dimensional sphere onto a 2-dimensional screen always creates
-distortions. Most world maps use the Mercator projection or something similar. These
-projections tend to have large distortions around the polar regions. Distances look
-bigger than they really are near the poles, and relatively smaller around the equator.
-People tend to be particularly confused by how the shortest route between two cities
-like Dubai and Los Angeles goes via the north pole, despite the fact that both of these
-cities are situated pretty far south. It makes a lot more sense when you look at an
-orthographic projection.
+- Search by city, airport name, IATA or ICAO code and append airports to a route.
+- Draw routes such as `SEA-ANC-BRW`, multiple routes separated by commas, or slash
+  expansions such as `SFO-HND/SIN`.
+- View each leg, route totals, nonstop comparisons and the total across all routes.
+- Switch between the 3D satellite globe, 2D satellite map and 2D street map.
+- Choose kilometers, miles or nautical miles, label format and route color.
+- Share the current URL; route and display settings survive reload and navigation.
 
-<img src="https://www.greatcirclemap.com/lax-dxb.jpg" />
+Distances and drawn paths use GeographicLib's WGS84 ellipsoid. These are shortest
+airport-to-airport paths, not recorded flight tracks or airline schedules. Satellite
+imagery comes from Esri; attribution remains available on the map. Cesium 1.108 is
+loaded from its CDN, so internet access and a WebGL-capable browser are required.
+No Google Maps or Cesium ion API key is needed. Legacy `/globe`, `/satellite`,
+`/roadmap`, `/leaflet` and `/google-*` URLs remain supported; Google URLs now use
+the corresponding Esri map view.
 
-The distances calculated are the shortest possible distances. However, airlines often don’t follow the shortest route exactly
-for a variety of reasons. Airspace reserved for military purposes and areas of
-conflict for example. The earth is not a perfect sphere, which is taken into account in
-the distance calculations. It is best approximated by an ellipsoid which is widest
-around the equator.
+## Development and verification
 
-If you found a bug or have a suggestion, please contact me at markus.s.englund@gmail.com
-or file an issue on Github.
+```sh
+npm ci --legacy-peer-deps
+npm run build:prod
+npm test -- --runInBand
+npm run lint
+node server.js
+```
 
-## Setup instructions
+Open `http://localhost:3000`. `npm run build` watches source changes. The generated
+`public/bundle.js` remains untracked; deployment must run the production build.
+The Jest/Babel and React test renderer versions are aligned with the application.
 
-- Install Node.js 20 (newer versions might not work)
-- Run `npm run build` in the project directory
-- Run `node server`
-- Open the browser at 127.0.0.1:3000
+## Publish to the Pages repository
 
-If you plan to host this on your own domain you have to set up your own Google Maps API key (read more [here](https://developers.google.com/maps/documentation/javascript/overview))
+The source build supports both a domain root and `/tools/great-circle-map/` without
+patching the generated JavaScript. The HTML entry point identifies the asset base.
+
+```sh
+npm run build:prod
+node scripts/export-pages.cjs /path/to/pages/tools/great-circle-map
+```
+
+The exporter copies the bundle and airport dataset and writes all static route
+entry points. Commit the source here and the generated files in the Pages repo.
+Before publishing, check route entry, airport search, invalid codes, settings,
+sharing, direct subpath reloads, and desktop/phone layouts in a browser.
+
+The project builds on Great Circle Map by Markus Englund (MIT).
 
 ## Airport data
 

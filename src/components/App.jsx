@@ -1,142 +1,399 @@
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
+import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
-import { Fragment } from 'redux-little-router';
-import ReactSidebar from 'react-sidebar';
+import { push } from 'redux-little-router';
+import { getAirportData } from '../actionCreators';
+import { getRoutes } from '../selectors';
+import { getRouteDistance, makeDistanceReadable } from '../utils/distance';
+import Globe from './Atlas/Globe';
+import { basePath } from '../utils/assetUrl';
+import '../stylesheets/atlas.scss';
 
-import { getAirportData, getSvgMap } from '../actionCreators';
-import Sidebar from './Sidebar';
-import GoogleMapWrapper from './GoogleMapWrapper';
-import ButtonGroup from './ButtonGroup';
-import SvgMap from './SvgMap';
-import SearchInput from './RouteInput/SearchInput';
-import Error404 from './Error404';
-import LeafletMap from './LeafletMap/LeafletMap';
+const EMPTY_ROUTES = [];
 
-class App extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      isSidebarDocked: true,
-      isSidebarOpen: false,
-      transitionsActive: false
-    };
-
-    this.toggleSidebarDock = this.toggleSidebarDock.bind(this);
-    this.handleSetSidebarOpen = this.handleSetSidebarOpen.bind(this);
-  }
-
-  componentDidMount() {
-    const { dispatch } = this.props;
+function App({ dispatch, airportData, result, query, pathname }) {
+  const [draft, setDraft] = useState(query.routes || '');
+  const [search, setSearch] = useState('');
+  const [tab, setTab] = useState('routes');
+  const [collapsed, setCollapsed] = useState(false);
+  const [command, setCommand] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [status, setStatus] = useState('');
+  const [shared, setShared] = useState('');
+  useEffect(() => {
     dispatch(getAirportData());
-    dispatch(getSvgMap());
-  }
-
-  // FIXME: Give this to redux instead. This is awkward structure.
-  toggleSidebarDock() {
-    this.setState({ transitionsActive: true });
-    this.setState({ isSidebarDocked: !this.state.isSidebarDocked });
-
-    // Resize map to workaround the empty map bug, 300 is animation delay
-    const { map } = this.props;
-    setTimeout(() => {
-      if (map && typeof window !== 'undefined' && window.google && window.google.maps) {
-        window.google.maps.event.trigger(
-          map.context.__SECRET_MAP_DO_NOT_USE_OR_YOU_WILL_BE_FIRED,
-          'resize'
-        );
-      }
-      // Trigger a window resize so Leaflet recalculates its size
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('resize'));
-      }
-    }, 300);
-  }
-
-  handleSetSidebarOpen(open) {
-    this.setState({ transitionsActive: true });
-    this.setState({ isSidebarOpen: open });
-  }
-
-  render() {
-    const { isMobile } = this.props;
-
-    return (
-      <ReactSidebar
-        sidebar={<Sidebar isMobile={isMobile} />}
-        docked={!isMobile ? this.state.isSidebarDocked : false}
-        open={isMobile ? this.state.isSidebarOpen : false}
-        onSetOpen={this.handleSetSidebarOpen}
-        transitions={this.state.transitionsActive}
-        styles={{
-          sidebar: { zIndex: 99 },
-          overlay: { zIndex: 3 }
-        }}
-      >
-        <div id="main">
-          {isMobile && <SearchInput />}
-          <div id="map-wrapper">
-            <ButtonGroup
-              isSidebarDocked={this.state.isSidebarDocked}
-              toggleSidebarDock={this.toggleSidebarDock}
-              handleSetSidebarOpen={this.handleSetSidebarOpen}
-            />
-            <Fragment
-              withConditions={({ pathname }) =>
-                pathname === '/satellite' || pathname === '/roadmap'
-              }
-            >
-              <LeafletMap />
-            </Fragment>
-            <Fragment
-              withConditions={({ pathname }) =>
-                pathname === '/google-satellite' || pathname === '/google-roadmap'
-              }
-            >
-              <GoogleMapWrapper />
-            </Fragment>
-            {/* <Fragment forRoute="/globe"> */}
-            <Fragment
-              withConditions={({ pathname }) => {
-                return pathname === '/' || pathname === '/globe';
-              }}
-            >
-              <SvgMap />
-            </Fragment>
-            <Fragment
-              withConditions={({ pathname }) => {
-                return (
-                  pathname !== '/' &&
-                  pathname !== '/roadmap' &&
-                  pathname !== '/globe' &&
-                  pathname !== '/satellite' &&
-                  pathname !== '/leaflet' &&
-                  pathname !== '/google-satellite' &&
-                  pathname !== '/google-roadmap'
-                );
-              }}
-            >
-              <Error404 />
-            </Fragment>
-          </div>
-        </div>
-      </ReactSidebar>
+  }, []);
+  useEffect(() => {
+    setDraft(query.routes || '');
+    setSelected(null);
+  }, [query.routes]);
+  useEffect(() => {
+    setCommand({ type: 'layout', time: Date.now() });
+  }, [tab, collapsed, selected, search]);
+  const routes = result.routes || EMPTY_ROUTES;
+  const unit = ['km', 'mi', 'nm'].includes(query.unit) ? query.unit : 'km';
+  const label = ['city', 'iata', 'icao', 'none'].includes(query.label) ? query.label : 'iata';
+  const color = /^#[0-9a-f]{6}$/i.test(query.color || '') ? query.color : '#80d9e3';
+  const path = pathname.replace(basePath, '').replace(/\/$/, '') || '/';
+  const mode = path.includes('roadmap')
+    ? 'roadmap'
+    : path.includes('satellite') || path === '/leaflet'
+    ? 'satellite'
+    : 'globe';
+  const update = values => dispatch(push({ query: values }, { persistQuery: true }));
+  const send = (type, extra = {}) => setCommand({ type, ...extra, time: Date.now() });
+  const distance = r => makeDistanceReadable(getRouteDistance(r), unit);
+  const sectors = routes.reduce((n, r) => n + Math.max(0, r.length - 1), 0);
+  const total = routes.reduce((n, r) => n + getRouteDistance(r), 0);
+  const matches =
+    search.trim().length > 1
+      ? airportData
+          .filter(a =>
+            [a.iata, a.icao, a.city, a.name].some(v =>
+              String(v || '')
+                .toLowerCase()
+                .includes(search.toLowerCase())
+            )
+          )
+          .slice(0, 6)
+      : [];
+  const addAirport = airport => {
+    const code = airport.iata || airport.icao;
+    setDraft(
+      value => value.trim() + (!value.trim() || /[-,;\n/]$/.test(value.trim()) ? '' : '-') + code
     );
-  }
-}
-
-App.propTypes = {
-  dispatch: PropTypes.func.isRequired,
-  map: PropTypes.shape({ fitBounds: PropTypes.func }),
-  isMobile: PropTypes.bool.isRequired
-};
-App.defaultProps = { map: null };
-
-function mapStateToProps(state) {
-  return {
-    map: state.map,
-    isMobile: state.isMobile
+    setSearch('');
   };
+  const switchMode = value =>
+    dispatch(push({ pathname: `/${value === 'globe' ? '' : value}` }, { persistQuery: true }));
+  async function share() {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      setShared('Link copied');
+    } catch (e) {
+      setShared('Copy the URL from your address bar to share this map.');
+    }
+    setTimeout(() => setShared(''), 5000);
+  }
+  return (
+    <main className="atlas-app">
+      <Globe
+        routes={routes}
+        label={label}
+        color={color}
+        mode={mode}
+        command={command}
+        onAirport={setSelected}
+        onStatus={setStatus}
+      />
+      <header className="atlas-brand">
+        <div className="atlas-eyebrow">A WORLD CONNECTED · FLIGHT ATLAS</div>
+        <h1>
+          Great Circle Map<span>.</span>
+        </h1>
+        <p>Every journey, a different perspective.</p>
+      </header>
+      <div className="atlas-mode-badge">
+        {mode === 'globe'
+          ? 'SATELLITE / 3D'
+          : mode === 'satellite'
+          ? 'SATELLITE / 2D'
+          : 'STREET MAP / 2D'}
+      </div>
+      <aside
+        className={`atlas-panel ${collapsed ? 'is-collapsed' : ''}`}
+        aria-label="Route planner"
+      >
+        <div className="atlas-panel-heading">
+          <span>YOUR FLIGHT ATLAS</span>
+          <button
+            aria-label={collapsed ? 'Expand planner' : 'Collapse planner'}
+            onClick={() => setCollapsed(!collapsed)}
+          >
+            {collapsed ? '+' : '−'}
+          </button>
+        </div>
+        {!collapsed && (
+          <>
+            <nav className="atlas-tabs" aria-label="Planner sections">
+              <button aria-pressed={tab === 'routes'} onClick={() => setTab('routes')}>
+                Routes
+              </button>
+              <button aria-pressed={tab === 'settings'} onClick={() => setTab('settings')}>
+                Map & settings
+              </button>
+            </nav>
+            {tab === 'routes' ? (
+              <>
+                <form
+                  onSubmit={e => {
+                    e.preventDefault();
+                    update({ routes: draft });
+                  }}
+                >
+                  <label className="atlas-field-label" htmlFor="airport-search">
+                    Find an airport
+                  </label>
+                  <input
+                    id="airport-search"
+                    placeholder="City, airport, IATA or ICAO"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    autoComplete="off"
+                  />
+                  {matches.length > 0 && (
+                    <ul className="atlas-search-results">
+                      {matches.map(a => (
+                        <li key={a.id}>
+                          <button type="button" onClick={() => addAirport(a)}>
+                            <strong>{a.iata || a.icao}</strong>
+                            <span>
+                              {a.city}
+                              <small>{a.name}</small>
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <label className="atlas-field-label" htmlFor="route-input">
+                    Your route
+                  </label>
+                  <textarea
+                    id="route-input"
+                    value={draft}
+                    onChange={e => setDraft(e.target.value)}
+                    placeholder="SEA-ANC-BRW"
+                    spellCheck="false"
+                    aria-describedby="route-help"
+                  />
+                  <p id="route-help" className="atlas-muted">
+                    Connect airports with – · Separate routes with commas.
+                    <br />
+                    IATA, ICAO and slash expansion are supported.
+                  </p>
+                  <div className="atlas-row">
+                    <button className="atlas-primary" type="submit" disabled={!airportData.length}>
+                      Draw routes <span>↗</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDraft('');
+                        update({ routes: '' });
+                      }}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </form>
+                {!airportData.length && (
+                  <p role="status" className="atlas-muted">
+                    Loading airports…{' '}
+                    <button onClick={() => dispatch(getAirportData())}>Retry</button>
+                  </p>
+                )}
+                {result.error && (
+                  <p role="alert" className="atlas-validation">
+                    {result.error}
+                  </p>
+                )}
+                {!query.routes && (
+                  <div className="atlas-examples">
+                    <span className="atlas-muted">Take a look</span>
+                    {['SEA-ANC-BRW', 'LAX-DXB', 'SFO-HND-SIN'].map(example => (
+                      <button key={example} onClick={() => update({ routes: example })}>
+                        {example} ↗
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="atlas-route-list">
+                  {routes.map((route, index) => (
+                    <article className="atlas-route" key={`${route.id}-${index}`}>
+                      <div className="atlas-route-heading">
+                        <button onClick={() => send('route', { route })}>
+                          <i style={{ borderColor: color }} />
+                          {route.map(a => a.userEnteredCode).join(' → ')}
+                        </button>
+                        <button
+                          className="atlas-remove"
+                          aria-label={`Remove route ${index + 1}`}
+                          onClick={() =>
+                            update({
+                              routes: routes
+                                .filter((_, i) => i !== index)
+                                .map(r => r.map(a => a.userEnteredCode).join('-'))
+                                .join(',')
+                            })
+                          }
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <details>
+                        <summary>
+                          {distance(route)}
+                          <span>{Math.max(0, route.length - 1)} legs · Details</span>
+                        </summary>
+                        <div className="atlas-legs">
+                          {route.slice(1).map((a, i) => (
+                            <div key={i}>
+                              <span>
+                                {route[i].city || route[i].iata} → {a.city || a.iata}
+                              </span>
+                              <b>{distance([route[i], a])}</b>
+                            </div>
+                          ))}
+                          {route.length > 2 && (
+                            <>
+                              <div>
+                                <span>Nonstop comparison</span>
+                                <b>{distance([route[0], route[route.length - 1]])}</b>
+                              </div>
+                              <div>
+                                <span>Extra distance</span>
+                                <b>
+                                  {makeDistanceReadable(
+                                    getRouteDistance(route) -
+                                      getRouteDistance([route[0], route[route.length - 1]]),
+                                    unit
+                                  )}
+                                </b>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </details>
+                    </article>
+                  ))}
+                </div>
+                {routes.length > 0 && (
+                  <div className="atlas-total">
+                    <span>TOTAL DISTANCE</span>
+                    <strong>{makeDistanceReadable(total, unit)}</strong>
+                    <small>
+                      {sectors} legs · {new Set(routes.flat().map(a => a.id)).size} airports
+                    </small>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="atlas-settings">
+                <label htmlFor="map-mode">
+                  Map view
+                  <select id="map-mode" value={mode} onChange={e => switchMode(e.target.value)}>
+                    <option value="globe">Satellite globe · 3D</option>
+                    <option value="satellite">Satellite map · 2D</option>
+                    <option value="roadmap">Street map · 2D</option>
+                  </select>
+                </label>
+                <label htmlFor="distance-unit">
+                  Distance unit
+                  <select
+                    id="distance-unit"
+                    value={unit}
+                    onChange={e => update({ unit: e.target.value })}
+                  >
+                    <option value="km">Kilometers</option>
+                    <option value="mi">Miles</option>
+                    <option value="nm">Nautical miles</option>
+                  </select>
+                </label>
+                <label htmlFor="airport-labels">
+                  Airport labels
+                  <select
+                    id="airport-labels"
+                    value={label}
+                    onChange={e => update({ label: e.target.value })}
+                  >
+                    <option value="iata">IATA code</option>
+                    <option value="icao">ICAO code</option>
+                    <option value="city">City name</option>
+                    <option value="none">Hidden</option>
+                  </select>
+                </label>
+                <label className="atlas-color" htmlFor="route-color">
+                  Route color
+                  <input
+                    id="route-color"
+                    type="color"
+                    value={color}
+                    onChange={e => update({ color: e.target.value })}
+                  />
+                </label>
+                <p className="atlas-muted">
+                  Distances follow the WGS84 ellipsoid. Dashed paths show the shortest
+                  airport-to-airport routes, not recorded flight tracks.
+                </p>
+                <p className="atlas-muted">
+                  Airport data: OpenTravelData. Map imagery: Esri and its contributors.
+                </p>
+              </div>
+            )}
+            <div className="atlas-footer-actions">
+              <button onClick={() => send('fit')}>Fit routes</button>
+              <button onClick={() => send('world')}>World view</button>
+              <button onClick={share}>Share ↗</button>
+            </div>
+            {shared && (
+              <p role="status" className="atlas-muted">
+                {shared}
+              </p>
+            )}
+          </>
+        )}
+      </aside>
+      <nav className="atlas-controls" aria-label="Map controls">
+        <button aria-label="Zoom in" onClick={() => send('in')}>
+          +
+        </button>
+        <button aria-label="Zoom out" onClick={() => send('out')}>
+          −
+        </button>
+        <button aria-label="Reset north" onClick={() => send('north')}>
+          N ↑
+        </button>
+        <button
+          aria-label="Fullscreen"
+          onClick={() => {
+            if (document.fullscreenElement) document.exitFullscreen();
+            else if (document.documentElement.requestFullscreen)
+              document.documentElement
+                .requestFullscreen()
+                .catch(() => setStatus('Fullscreen is not available in this browser.'));
+            else setStatus('Fullscreen is not available in this browser.');
+          }}
+        >
+          ⛶
+        </button>
+      </nav>
+      {selected && (
+        <aside className="atlas-detail">
+          <button aria-label="Close airport details" onClick={() => setSelected(null)}>
+            ×
+          </button>
+          <span className="atlas-eyebrow">
+            {selected.iata} / {selected.icao}
+          </span>
+          <h2>{selected.name}</h2>
+          <p>{selected.city}</p>
+          <small>
+            {selected.lat.toFixed(3)}°, {selected.lng.toFixed(3)}°
+          </small>
+        </aside>
+      )}
+      {status && (
+        <div className="atlas-status" role="status">
+          {status}
+        </div>
+      )}
+      <footer className="atlas-hint">Drag to explore · Scroll to zoom · Right-drag to tilt</footer>
+    </main>
+  );
 }
-
-export default connect(mapStateToProps)(App);
+export default connect(state => ({
+  airportData: state.airportData,
+  result: getRoutes(state),
+  query: state.router.query,
+  pathname: state.router.pathname
+}))(App);

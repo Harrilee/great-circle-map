@@ -5,28 +5,40 @@
     "node": true,
     "jest": true
   },
-  "extends": ["prettier", "prettier/react"],
+  "extends": [
+    "prettier",
+    "prettier/react"
+  ],
   "parserOptions": {
     "ecmaFeatures": {
       "jsx": true
     },
-    "sourceType": "module"
+    "sourceType": "module",
+    "ecmaVersion": 2018
   },
-  "plugins": ["react"],
+  "plugins": [
+    "react",
+    "jsx-a11y"
+  ],
   "globals": {
     "google": true,
     "ga": true
   },
   "rules": {
     "linebreak-style": "off",
-    "comma-dangle": ["warn", "never"],
+    "comma-dangle": [
+      "warn",
+      "never"
+    ],
     "arrow-body-style": "off",
     "no-underscore-dangle": "off",
     "jsx-a11y/label-has-for": [
       "error",
       {
         "required": {
-          "every": ["id"]
+          "every": [
+            "id"
+          ]
         }
       }
     ],
