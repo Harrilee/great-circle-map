@@ -14,6 +14,9 @@ you rotate the Earth. The planner becomes a collapsible bottom panel on phones.
 - Switch between satellite and street maps in both 3D and 2D.
 - Expand **Show all data** to inspect route details and totals; these stay collapsed by default.
 - Choose kilometers, miles or nautical miles, label format and route color.
+- Adjust label size (8–32 px), opacity (0–100%), text/background colors, and airport
+  point diameter (2–24 px). Changes preview immediately without moving the camera
+  and are included in shared URLs; reset restores the original marker style.
 - Share the current URL; route and display settings survive reload and navigation.
 
 Distances and drawn paths use GeographicLib's WGS84 ellipsoid. These are shortest

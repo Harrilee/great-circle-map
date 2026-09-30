@@ -16,7 +16,20 @@ export function sampleRoute(route) {
   return points;
 }
 
-export default function Globe({ routes, label, color, mode, command, onAirport, onStatus }) {
+export default function Globe({
+  routes,
+  label,
+  color,
+  mode,
+  command,
+  onAirport,
+  onStatus,
+  labelSize,
+  labelOpacity,
+  labelForeground,
+  labelBackground,
+  pointSize
+}) {
   const mount = useRef(null),
     overlay = useRef(null),
     viewerRef = useRef(null);
@@ -30,7 +43,8 @@ export default function Globe({ routes, label, color, mode, command, onAirport, 
   const [failure, setFailure] = useState('');
   useEffect(() => {
     let disposed = false,
-      viewer;
+      viewer,
+      creditObserver;
     async function initialize() {
       try {
         if (!C())
@@ -56,6 +70,14 @@ export default function Globe({ routes, label, color, mode, command, onAirport, 
           shouldAnimate: false
         });
         viewerRef.current = viewer;
+        const credits = mount.current.querySelector('.cesium-widget-credits');
+        creditObserver = new ResizeObserver(() => {
+          mount.current.parentElement.style.setProperty(
+            '--atlas-credit-height',
+            `${credits.getBoundingClientRect().height}px`
+          );
+        });
+        creditObserver.observe(credits);
         viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#07111c');
         viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#183c4b');
         viewer.scene.globe.maximumScreenSpaceError = 0.75;
@@ -75,6 +97,7 @@ export default function Globe({ routes, label, color, mode, command, onAirport, 
     initialize();
     return () => {
       disposed = true;
+      if (creditObserver) creditObserver.disconnect();
       if (viewer && !viewer.isDestroyed()) viewer.destroy();
       viewerRef.current = null;
     };
@@ -274,6 +297,32 @@ export default function Globe({ routes, label, color, mode, command, onAirport, 
     viewer.scene.requestRender();
     return () => remove();
   }, [ready, routes, label, color]);
+
+  useEffect(() => {
+    if (!ready) return;
+    // Update existing labels/points so dragging a slider never rebuilds routes or moves the camera.
+    overlay.current.querySelectorAll('.atlas-map-label').forEach(button => {
+      button.style.fontSize = `${labelSize}px`;
+      button.style.opacity = labelOpacity / 100;
+      button.style.color = labelForeground;
+      button.style.backgroundColor = labelBackground;
+      button.style.pointerEvents = labelOpacity === 0 ? 'none' : 'auto';
+    });
+    viewerRef.current.entities.values.forEach(entity => {
+      if (entity.point) entity.point.pixelSize = pointSize;
+    });
+    viewerRef.current.scene.requestRender();
+  }, [
+    ready,
+    routes,
+    label,
+    color,
+    labelSize,
+    labelOpacity,
+    labelForeground,
+    labelBackground,
+    pointSize
+  ]);
 
   useEffect(() => {
     if (!ready || !command) return;

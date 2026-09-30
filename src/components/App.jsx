@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
-import { push } from 'redux-little-router';
+import { push, replace } from 'redux-little-router';
 import { getAirportData } from '../actionCreators';
 import { getRoutes } from '../selectors';
 import { getRouteDistance, makeDistanceReadable } from '../utils/distance';
@@ -8,6 +8,7 @@ import Globe from './Atlas/Globe';
 import AirportPicker from './Atlas/AirportPicker';
 import { basePath } from '../utils/assetUrl';
 import '../stylesheets/atlas.scss';
+import { markerDefaults, readMarkerStyle } from '../utils/markerStyle';
 
 const EMPTY_ROUTES = [];
 
@@ -33,6 +34,8 @@ function App({ dispatch, airportData, result, query, pathname }) {
   const unit = ['km', 'mi', 'nm'].includes(query.unit) ? query.unit : 'km';
   const label = ['city', 'iata', 'icao', 'none'].includes(query.label) ? query.label : 'iata';
   const color = /^#[0-9a-f]{6}$/i.test(query.color || '') ? query.color : '#80d9e3';
+  const markerStyle = readMarkerStyle(query);
+  const updateMarkerStyle = values => dispatch(replace({ query: values }, { persistQuery: true }));
   const path = pathname.replace(basePath, '').replace(/\/$/, '') || '/';
   const mode =
     path === '/roadmap-3d'
@@ -61,6 +64,7 @@ function App({ dispatch, airportData, result, query, pathname }) {
   return (
     <main className="atlas-app">
       <Globe
+        {...markerStyle}
         routes={routes}
         label={label}
         color={color}
@@ -295,6 +299,53 @@ function App({ dispatch, airportData, result, query, pathname }) {
                     <option value="none">Hidden</option>
                   </select>
                 </label>
+                <fieldset className="atlas-marker-settings">
+                  <legend>Labels & airport points</legend>
+                  {[
+                    ['labelSize', 'Label size', 8, 32, 'px'],
+                    ['labelOpacity', 'Label opacity', 0, 100, '%'],
+                    ['pointSize', 'Airport point size', 2, 24, 'px']
+                  ].map(([key, title, min, max, unit]) => (
+                    <label className="atlas-range" htmlFor={key} key={key}>
+                      <span>
+                        {title}
+                        <output htmlFor={key}>
+                          {markerStyle[key]} {unit}
+                        </output>
+                      </span>
+                      <input
+                        id={key}
+                        type="range"
+                        min={min}
+                        max={max}
+                        step="1"
+                        value={markerStyle[key]}
+                        onChange={e => updateMarkerStyle({ [key]: e.target.value })}
+                      />
+                    </label>
+                  ))}
+                  {[
+                    ['labelForeground', 'Label text color'],
+                    ['labelBackground', 'Label background color']
+                  ].map(([key, title]) => (
+                    <label className="atlas-color" htmlFor={key} key={key}>
+                      {title}
+                      <input
+                        id={key}
+                        type="color"
+                        value={markerStyle[key]}
+                        onChange={e => updateMarkerStyle({ [key]: e.target.value })}
+                      />
+                    </label>
+                  ))}
+                  <button
+                    type="button"
+                    className="atlas-reset-style"
+                    onClick={() => updateMarkerStyle(markerDefaults)}
+                  >
+                    Reset label & point style
+                  </button>
+                </fieldset>
                 <label className="atlas-color" htmlFor="route-color">
                   Route color
                   <input
